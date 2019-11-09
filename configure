@@ -171,8 +171,6 @@ fi
 
 if  test -z "$NETCDF_classic"  ; then
   export NETCDF4=1
-#else
-#  unset NETCDF4
 fi
 
 USENETCDFF=""
