@@ -714,20 +714,6 @@ SUBROUTINE phy_bl_ten(config_flags,rk_step,n_moist,n_scalar,     &
                 ims, ime, jms, jme, kms, kme,                    &
                 its, ite, jts, jte, kts, kte                     )
 
-        if (P_QT .ge. PARAM_FIRST_SCALAR)                                         &
-           CALL add_a2a(scalar_tendf(ims,kms,jms,P_QT),RQNIBLTEN,&
-               config_flags,                                    &
-               ids,ide, jds, jde, kds, kde,                     &
-               ims, ime, jms, jme, kms, kme,                    &
-               its, ite, jts, jte, kts, kte                     )
-
-!        if (P_QT .ge. PARAM_FIRST_SCALAR)                                         &
-!           CALL add_a2a(scalar_tendf(ims,kms,jms,P_QT),RQNCBLTEN,&
-!                config_flags,                                    &
-!                ids,ide, jds, jde, kds, kde,                     &
-!                ims, ime, jms, jme, kms, kme,                    &
-!                its, ite, jts, jte, kts, kte                     )
-
        ELSE
 
         if (P_QC .ge. PARAM_FIRST_SCALAR)                                         &
@@ -743,20 +729,6 @@ SUBROUTINE phy_bl_ten(config_flags,rk_step,n_moist,n_scalar,     &
                 ids,ide, jds, jde, kds, kde,                     &
                 ims, ime, jms, jme, kms, kme,                    &
                 its, ite, jts, jte, kts, kte                     )
-
-        if (P_QNI .ge. PARAM_FIRST_SCALAR)                                         &
-           CALL add_a2a(scalar_tendf(ims,kms,jms,P_QNI),RQNIBLTEN,&
-                config_flags,                                    &
-                ids,ide, jds, jde, kds, kde,                     &
-                ims, ime, jms, jme, kms, kme,                    &
-                its, ite, jts, jte, kts, kte                     )
-
-!        if (P_QNC .ge. PARAM_FIRST_SCALAR)                                         &
-!           CALL add_a2a(scalar_tendf(ims,kms,jms,P_QNC),RQNCBLTEN,&
-!                config_flags,                                    &
-!                ids,ide, jds, jde, kds, kde,                     &
-!                ims, ime, jms, jme, kms, kme,                    &
-!                its, ite, jts, jte, kts, kte                     )
 
        ENDIF
 
@@ -1112,7 +1084,7 @@ SUBROUTINE phy_cu_ten(config_flags,rk_step,n_moist,n_scalar,     &
                 ims, ime, jms, jme, kms, kme,                    &
                 its, ite, jts, jte, kts, kte                     )
 
-   CASE (KFETASCHEME, MSKFSCHEME, KFCUPSCHEME)!BSINGH -  Added KFCUPSCHEME for CuP
+   CASE (KFETASCHEME, KFCUPSCHEME)!BSINGH -  Added KFCUPSCHEME for CuP
         CALL add_a2a(rt_tendf,RTHCUTEN,config_flags,             &
                 ids,ide, jds, jde, kds, kde,                     &
                 ims, ime, jms, jme, kms, kme,                    &
@@ -1184,6 +1156,91 @@ SUBROUTINE phy_cu_ten(config_flags,rk_step,n_moist,n_scalar,     &
                 its, ite, jts, jte, kts, kte                     )
 
        ENDIF
+
+   CASE (MSKFSCHEME)!JTR: Separate MSKF for cmt
+        CALL add_a2a(rt_tendf,RTHCUTEN,config_flags,             &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        CALL add_a2c_u(ru_tendf,RUCUTEN,config_flags,            &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        CALL add_a2c_v(rv_tendf,RVCUTEN,config_flags,            &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+ 
+        if (P_QV .ge. PARAM_FIRST_SCALAR)                                         &
+        CALL add_a2a(moist_tendf(ims,kms,jms,P_QV),RQVCUTEN,     &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        if (P_QC .ge. PARAM_FIRST_SCALAR)                                         &
+        CALL add_a2a(moist_tendf(ims,kms,jms,P_QC),RQCCUTEN,     &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        if (P_QR .ge. PARAM_FIRST_SCALAR)                                         &
+        CALL add_a2a(moist_tendf(ims,kms,jms,P_QR),RQRCUTEN,     &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        if (P_QI .ge. PARAM_FIRST_SCALAR)                                         &
+        CALL add_a2a(moist_tendf(ims,kms,jms,P_QI),RQICUTEN,     &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        if (P_QS .ge. PARAM_FIRST_SCALAR)                                         &
+        CALL add_a2a(moist_tendf(ims,kms,jms,P_QS),RQSCUTEN,     &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+       IF(.not. adv_moist_cond)THEN
+
+        if (P_QT .ge. PARAM_FIRST_SCALAR)                        &
+           CALL add_a2a(scalar_tendf(ims,kms,jms,P_QT),RQCCUTEN, &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        if (P_QT .ge. PARAM_FIRST_SCALAR)                        &
+           CALL add_a2a(scalar_tendf(ims,kms,jms,P_QT),RQRCUTEN, &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        if (P_QT .ge. PARAM_FIRST_SCALAR)                        &
+           CALL add_a2a(scalar_tendf(ims,kms,jms,P_QT),RQICUTEN, &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        if (P_QT .ge. PARAM_FIRST_SCALAR)                        &
+           CALL add_a2a(scalar_tendf(ims,kms,jms,P_QT),RQSCUTEN, &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+       ENDIF
+
+
    CASE (GDSCHEME, G3SCHEME, GFSCHEME)
         CALL add_a2a(rt_tendf,RTHCUTEN,config_flags,             &
                 ids,ide, jds, jde, kds, kde,                     &
@@ -1678,6 +1735,44 @@ SUBROUTINE phy_shcu_ten(config_flags,rk_step,n_moist,n_scalar,   &
                 ids,ide, jds, jde, kds, kde,                     &
                 ims, ime, jms, jme, kms, kme,                    &
                 its, ite, jts, jte, kts, kte                     )
+
+  CASE (DENGSHCUSCHEME)
+        CALL add_a2c_u(ru_tendf,RUSHTEN,config_flags,            &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        CALL add_a2c_v(rv_tendf,RVSHTEN,config_flags,            &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        CALL add_a2a(rt_tendf,RTHSHTEN,config_flags,             &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        if (P_QV .ge. PARAM_FIRST_SCALAR)                        &
+        CALL add_a2a(moist_tendf(ims,kms,jms,P_QV),RQVSHTEN,     &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        if (P_QC .ge. PARAM_FIRST_SCALAR)                        &
+        CALL add_a2a(moist_tendf(ims,kms,jms,P_QC),RQCSHTEN,     &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
+        if (P_QR .ge. PARAM_FIRST_SCALAR)                        &
+        CALL add_a2a(moist_tendf(ims,kms,jms,P_QR),RQRSHTEN,     &
+                config_flags,                                    &
+                ids,ide, jds, jde, kds, kde,                     &
+                ims, ime, jms, jme, kms, kme,                    &
+                its, ite, jts, jte, kts, kte                     )
+
 
    CASE DEFAULT
 

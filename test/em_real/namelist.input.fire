@@ -118,12 +118,12 @@
 !
 ! ignition
  fire_num_ignitions = 3,        ! integer, only the first fire_num_ignition used, up to 5 allowed
- fire_ignition_start_long1=-107.293664, ! start points of ignition lines, longitude 
+ fire_ignition_start_lon1=-107.293664, ! start points of ignition lines, longitude 
  fire_ignition_start_lat1 =  39.698696, ! start points of ignition lines,latitude 
- fire_ignition_end_long1 = -107.293664, ! end points of ignition lines
+ fire_ignition_end_lon1 = -107.293664, ! end points of ignition lines
  fire_ignition_end_lat1 =    39.710990, ! end points of ignition lines
  fire_ignition_radius1 =    18, ! all within this radius (m) will ignite, > fire mesh step
- fire_ignition_time1  =      2, ! sec for ignition from the start
+ fire_ignition_start_time1  =      2, ! sec for ignition from the start
  fire_ignition_start_long2=-107.287954, ! start points of ignition lines, 
  fire_ignition_start_lat2 =  39.698696, ! start points of ignition lines, 
  fire_ignition_end_long2 = -107.287954,! end points of ignition lines, 
@@ -141,6 +141,18 @@
  fire_print_msg     = 0,    ! 1 to print fire debugging/progress messages (compile with DEBUG OUT in the sf sources)
  fire_print_file    = 0,    ! 1 to write text output files for matlab
 !
+! fuel moisture model
+!
+ fmoist_run = .true.         ! if true, turn on the fuel moisture content (FMC) model
+ fmoist_interp = .true.,     ! if true, interpolate FMC to fuels on the fire grid
+ fmoist_only = .false.       ! if true, skip the fire model and run FMC model only
+ fmoist_freq = 0,            ! frequency of run or 0 to run using the specified fmost_dt
+ fmoist_dt = 10,             ! moisture model time step (s)
+ fire_fmc_read = 0,          ! how to set FMC map
+                             ! 0 read on start as fmc_g in wrfinput; required when the FMC model is on and overwritten by the FMC model
+                             ! 1 set initially as constant value from namelist.fire (default, use when FMC model is off)
+                             ! 2 read from a text file (in ideal.exe only)
+
 ! method selections for experiments, *do not change*
  fire_boundary_guard = -1,      ! integer, number of cells to stop when fire close to the domain boundary, -1 turn off
  fire_fuel_left_method=1,       ! 1=simple algebraic, 2=exact quadrature and least squares

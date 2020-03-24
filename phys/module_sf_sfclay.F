@@ -24,9 +24,8 @@ CONTAINS
                      ids,ide, jds,jde, kds,kde,                    &
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
-                     ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,scm_force_flux &
-                    ,dxCell                                        &
-                         )
+                     ustm,ck,cka,cd,cda,                           &
+                     isftcflx,iz0tlnd,scm_force_flux)
 !-------------------------------------------------------------------
       IMPLICIT NONE
 !-------------------------------------------------------------------
@@ -174,8 +173,10 @@ CONTAINS
       REAL,     DIMENSION( ims:ime, jms:jme )                    , &
                 INTENT(INOUT)   ::                                 &
                                                               QGH
+      REAL,     INTENT(IN   )               ::   CP,G,ROVCP,R,XLV
 
-      REAL,     INTENT(IN   )               ::   CP,G,ROVCP,R,XLV,DX
+      REAL,     DIMENSION( ims:ime, jms:jme )                    , &
+                INTENT(IN   )               ::                 DX
  
       REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme )              , &
                 INTENT(OUT)     ::                  ck,cka,cd,cda
@@ -186,9 +187,8 @@ CONTAINS
       INTEGER,  OPTIONAL,  INTENT(IN )   ::     ISFTCFLX, IZ0TLND
       INTEGER,  OPTIONAL,  INTENT(IN )   ::     SCM_FORCE_FLUX
 
-      real,intent(in),dimension(ims:ime,jms:jme),optional:: dxCell
-
-      real,intent(inout),dimension(ims:ime,jms:jme):: qsfc
+      REAL,     DIMENSION( ims:ime, jms:jme )                    , &
+                INTENT(INOUT  )             ::               QSFC
 
       REAL,     DIMENSION( ims:ime, jms:jme )                    , &
                 INTENT(OUT  )               ::                U10, &
@@ -207,9 +207,16 @@ CONTAINS
 
       REAL,     DIMENSION( its:ite ) ::                    dz8w1d
 
+      REAL,     DIMENSION( its:ite ) ::                      DX2D
+
       INTEGER ::  I,J
 
       DO J=jts,jte
+
+        DO i=its,ite
+           DX2D(i)=DX(i,j)
+        ENDDO
+
         DO i=its,ite
           dz8w1d(I) = dz8w(i,1,j)
         ENDDO
@@ -235,20 +242,16 @@ CONTAINS
                 U10(ims,j),V10(ims,j),TH2(ims,j),T2(ims,j),        &
                 Q2(ims,j),FLHC(ims,j),FLQC(ims,j),QGH(ims,j),      &
                 QSFC(ims,j),LH(ims,j),                             &
-                GZ1OZ0(ims,j),WSPD(ims,j),BR(ims,j),ISFFLX,DX,     &
+                GZ1OZ0(ims,j),WSPD(ims,j),BR(ims,j),ISFFLX,DX2D,   &
                 SVP1,SVP2,SVP3,SVPT0,EP1,EP2,KARMAN,EOMEG,STBOLT,  &
                 P1000mb,                                           &
                 ids,ide, jds,jde, kds,kde,                         &
                 ims,ime, jms,jme, kms,kme,                         &
                 its,ite, jts,jte, kts,kte                          &
-#if defined(mpas) 
+#if ( ( EM_CORE == 1 ) || ( defined(mpas) ) )
                 ,isftcflx,iz0tlnd,scm_force_flux,                  &
                 USTM(ims,j),CK(ims,j),CKA(ims,j),                  &
-                CD(ims,j),CDA(ims,j),dxCell(ims,j)                 &
-#elif ( EM_CORE == 1)
-                ,isftcflx,iz0tlnd,scm_force_flux,                  &
-                USTM(ims,j),CK(ims,j),CKA(ims,j),                  &
-                CD(ims,j),CDA(ims,j)                               & 
+                CD(ims,j),CDA(ims,j)                               &
 #endif
                                                                    )
       ENDDO
@@ -271,7 +274,7 @@ CONTAINS
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
                      isftcflx, iz0tlnd, scm_force_flux,            &
-                     ustm,ck,cka,cd,cda,dxCell                     )
+                     ustm,ck,cka,cd,cda                            )
 !-------------------------------------------------------------------
       IMPLICIT NONE
 !-------------------------------------------------------------------
@@ -325,14 +328,14 @@ CONTAINS
                 INTENT(INOUT)   ::                                 &
                                                               QGH
 
-      REAL,     DIMENSION( ims:ime ), INTENT(INOUT)  ::      QSFC
-
       REAL,     DIMENSION( ims:ime )                             , &
                 INTENT(OUT)     ::                        U10,V10, &
-                                                     TH2,T2,Q2,LH
+                                                TH2,T2,Q2,QSFC,LH
 
                                     
-      REAL,     INTENT(IN   )               ::   CP,G,ROVCP,R,XLV,DX
+      REAL,     INTENT(IN   )               ::   CP,G,ROVCP,R,XLV
+
+      REAL,     DIMENSION( its:ite ),  INTENT(IN   )   ::      DX
 
 ! MODULE-LOCAL VARIABLES, DEFINED IN SUBROUTINE SFCLAY
       REAL,     DIMENSION( its:ite ),  INTENT(IN   )   ::  dz8w1d
@@ -343,8 +346,6 @@ CONTAINS
                                                               P1D, &
                                                               T1D
  
-      real,intent(in),dimension(ims:ime),optional:: dxCell
-
       REAL, OPTIONAL, DIMENSION( ims:ime )                       , &
                 INTENT(OUT)     ::                  ck,cka,cd,cda
       REAL, OPTIONAL, DIMENSION( ims:ime )                       , &
@@ -521,11 +522,7 @@ CONTAINS
         VCONV = SQRT(DTHVM)
         endif
 ! Mahrt and Sun low-res correction
-        if(present(dxCell)) then
-           vsgd = 0.32 * (max(dxCell(i)/5000.-1.,0.))**.33
-        else
-           VSGD = 0.32 * (max(dx/5000.-1.,0.))**.33
-        endif
+        VSGD = 0.32 * (max(dx(i)/5000.-1.,0.))**.33
         WSPD(I)=SQRT(WSPD(I)*WSPD(I)+VCONV*VCONV+vsgd*vsgd)
         WSPD(I)=AMAX1(WSPD(I),0.1)
         BR(I)=GOVRTH(I)*ZA(I)*DTHVDZ/(WSPD(I)*WSPD(I))                        

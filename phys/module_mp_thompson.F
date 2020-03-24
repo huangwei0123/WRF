@@ -107,8 +107,8 @@
 !.. mixing ratio.  Also, when mu_g is non-zero, these become equiv
 !.. y-intercept for an exponential distrib and proper values are
 !.. computed based on same mixing ratio and total number concentration.
-      REAL, PARAMETER, PRIVATE:: gonv_min = 1.E4
-      REAL, PARAMETER, PRIVATE:: gonv_max = 3.E6
+      REAL, PARAMETER, PRIVATE:: gonv_min = 1.E3
+      REAL, PARAMETER, PRIVATE:: gonv_max = 9.E6
 
 !..Mass power law relations:  mass = am*D**bm
 !.. Snow from Field et al. (2005), others assume spherical form.
@@ -211,9 +211,9 @@
       INTEGER, PARAMETER, PRIVATE:: ntb_c = 37
       INTEGER, PARAMETER, PRIVATE:: ntb_i = 64
       INTEGER, PARAMETER, PRIVATE:: ntb_r = 37
-      INTEGER, PARAMETER, PRIVATE:: ntb_s = 28
-      INTEGER, PARAMETER, PRIVATE:: ntb_g = 28
-      INTEGER, PARAMETER, PRIVATE:: ntb_g1 = 28
+      INTEGER, PARAMETER, PRIVATE:: ntb_s = 37
+      INTEGER, PARAMETER, PRIVATE:: ntb_g = 37
+      INTEGER, PARAMETER, PRIVATE:: ntb_g1 = 37
       INTEGER, PARAMETER, PRIVATE:: ntb_r1 = 37
       INTEGER, PARAMETER, PRIVATE:: ntb_i1 = 55
       INTEGER, PARAMETER, PRIVATE:: ntb_t = 9
@@ -264,14 +264,16 @@
 
 !..Lookup tables for graupel content (kg/m**3).
       REAL, DIMENSION(ntb_g), PARAMETER, PRIVATE:: &
-      r_g = (/1.e-5,2.e-5,3.e-5,4.e-5,5.e-5,6.e-5,7.e-5,8.e-5,9.e-5, &
+      r_g = (/1.e-6,2.e-6,3.e-6,4.e-6,5.e-6,6.e-6,7.e-6,8.e-6,9.e-6, &
+              1.e-5,2.e-5,3.e-5,4.e-5,5.e-5,6.e-5,7.e-5,8.e-5,9.e-5, &
               1.e-4,2.e-4,3.e-4,4.e-4,5.e-4,6.e-4,7.e-4,8.e-4,9.e-4, &
               1.e-3,2.e-3,3.e-3,4.e-3,5.e-3,6.e-3,7.e-3,8.e-3,9.e-3, &
               1.e-2/)
 
 !..Lookup tables for snow content (kg/m**3).
       REAL, DIMENSION(ntb_s), PARAMETER, PRIVATE:: &
-      r_s = (/1.e-5,2.e-5,3.e-5,4.e-5,5.e-5,6.e-5,7.e-5,8.e-5,9.e-5, &
+      r_s = (/1.e-6,2.e-6,3.e-6,4.e-6,5.e-6,6.e-6,7.e-6,8.e-6,9.e-6, &
+              1.e-5,2.e-5,3.e-5,4.e-5,5.e-5,6.e-5,7.e-5,8.e-5,9.e-5, &
               1.e-4,2.e-4,3.e-4,4.e-4,5.e-4,6.e-4,7.e-4,8.e-4,9.e-4, &
               1.e-3,2.e-3,3.e-3,4.e-3,5.e-3,6.e-3,7.e-3,8.e-3,9.e-3, &
               1.e-2/)
@@ -286,7 +288,8 @@
 
 !..Lookup tables for graupel y-intercept parameter (/m**4).
       REAL, DIMENSION(ntb_g1), PARAMETER, PRIVATE:: &
-      N0g_exp = (/1.e4,2.e4,3.e4,4.e4,5.e4,6.e4,7.e4,8.e4,9.e4, &
+      N0g_exp = (/1.e3,2.e3,3.e3,4.e3,5.e3,6.e3,7.e3,8.e3,9.e3, &
+                  1.e4,2.e4,3.e4,4.e4,5.e4,6.e4,7.e4,8.e4,9.e4, &
                   1.e5,2.e5,3.e5,4.e5,5.e5,6.e5,7.e5,8.e5,9.e5, &
                   1.e6,2.e6,3.e6,4.e6,5.e6,6.e6,7.e6,8.e6,9.e6, &
                   1.e7/)
@@ -1123,6 +1126,7 @@
             qg1d(k) = qg(i,k,j)
             ni1d(k) = ni(i,k,j)
             nr1d(k) = nr(i,k,j)
+            rho(k) = 0.622*p1d(k)/(R*t1d(k)*(qv1d(k)+0.622))
          enddo
          if (is_aerosol_aware) then
             do k = kts, kte
@@ -1133,7 +1137,6 @@
             nwfa1 = nwfa2d(i,j)
          else
             do k = kts, kte
-               rho(k) = 0.622*p1d(k)/(R*t1d(k)*(qv1d(k)+0.622))
                nc1d(k) = Nt_c/rho(k)
                nwfa1d(k) = 11.1E6/rho(k)
                nifa1d(k) = naIN1*0.01/rho(k)
@@ -1432,7 +1435,7 @@
       REAL:: r_frac, g_frac
       REAL:: Ef_rw, Ef_sw, Ef_gw, Ef_rr
       REAL:: Ef_ra, Ef_sa, Ef_ga
-      REAL:: dtsave, odts, odt, odzq, hgt_agl
+      REAL:: dtsave, odts, odt, odzq, hgt_agl, SR
       REAL:: xslw1, ygra1, zans1, eva_factor
       INTEGER:: i, k, k2, n, nn, nstep, k_0, kbot, IT, iexfrq
       INTEGER, DIMENSION(5):: ksed1
@@ -1617,8 +1620,8 @@
             ri(k) = qi1d(k)*rho(k)
             ni(k) = MAX(R2, ni1d(k)*rho(k))
             if (ni(k).le. R2) then
-               lami = cie(2)/25.E-6
-               ni(k) = MIN(499.D3, cig(1)*oig2*ri(k)/am_i*lami**bm_i)
+               lami = cie(2)/5.E-6
+               ni(k) = MIN(9999.D3, cig(1)*oig2*ri(k)/am_i*lami**bm_i)
             endif
             L_qi(k) = .true.
             lami = (am_i*cig(2)*oig1*ni(k)/ri(k))**obmi
@@ -1626,7 +1629,7 @@
             xDi = (bm_i + mu_i + 1.) * ilami
             if (xDi.lt. 5.E-6) then
              lami = cie(2)/5.E-6
-             ni(k) = MIN(499.D3, cig(1)*oig2*ri(k)/am_i*lami**bm_i)
+             ni(k) = MIN(9999.D3, cig(1)*oig2*ri(k)/am_i*lami**bm_i)
             elseif (xDi.gt. 300.E-6) then
              lami = cie(2)/300.E-6
              ni(k) = cig(1)*oig2*ri(k)/am_i*lami**bm_i
@@ -1833,23 +1836,12 @@
 !+---+-----------------------------------------------------------------+
 !..Calculate y-intercept, slope values for graupel.
 !+---+-----------------------------------------------------------------+
-      N0_min = gonv_max
-      k_0 = kts
+
       do k = kte, kts, -1
-         if (temp(k).ge.270.65) k_0 = MAX(k_0, k)
-      enddo
-      do k = kte, kts, -1
-         if (k.gt.k_0 .and. L_qr(k) .and. mvd_r(k).gt.100.E-6) then
-            xslw1 = 4.01 + alog10(mvd_r(k))
-         else
-            xslw1 = 0.01
-         endif
-         ygra1 = 4.31 + alog10(max(5.E-5, rg(k)))
-         zans1 = 3.1 + (100./(300.*xslw1*ygra1/(10./xslw1+1.+0.25*ygra1)+30.+10.*ygra1))
+         ygra1 = alog10(max(1.E-9, rg(k)))
+         zans1 = (3.5 + 2./7. * (ygra1+7.))
+         zans1 = MAX(2., MIN(zans1, 7.))
          N0_exp = 10.**(zans1)
-         N0_exp = MAX(DBLE(gonv_min), MIN(N0_exp, DBLE(gonv_max)))
-         N0_min = MIN(N0_exp, N0_min)
-         N0_exp = N0_min
          lam_exp = (N0_exp*am_g*cgg(1)/rg(k))**oge1
          lamg = lam_exp * (cgg(3)*ogg2*ogg1)**obmg
          ilamg(k) = 1./lamg
@@ -1905,7 +1897,7 @@
           tau  = 3.72/(rc(k)*taud)
           prr_wau(k) = zeta/tau
           prr_wau(k) = MIN(DBLE(rc(k)*odts), prr_wau(k))
-          pnr_wau(k) = prr_wau(k) / (am_r*nu_c*D0r*D0r*D0r)              ! RAIN2M
+          pnr_wau(k) = prr_wau(k) / (am_r*nu_c*200.*D0r*D0r*D0r)         ! RAIN2M
           pnc_wau(k) = MIN(DBLE(nc(k)*odts), prr_wau(k)                 &
                      / (am_r*mvd_c(k)*mvd_c(k)*mvd_c(k)))                   ! Qc2M
          endif
@@ -1944,8 +1936,12 @@
 !..Compute all frozen hydrometeor species' process terms.
 !+---+-----------------------------------------------------------------+
       if (.not. iiwarm) then
+      !..vts_boost is the factor applied to snow terminal
+      !..fallspeed due to riming of snow
       do k = kts, kte
-         vts_boost(k) = 1.5
+         vts_boost(k) = 1.0
+         xDs = 0.0
+         if (L_qs(k)) xDs = smoc(k) / smob(k)
 
 !..Temperature lookup table indexes.
          tempc = temp(k) - 273.15
@@ -2097,13 +2093,12 @@
 
 !..Snow collecting cloud water.  In CE, assume Dc<<Ds and vtc=~0.
          if (L_qc(k) .and. mvd_c(k).gt. D0c) then
-          xDs = 0.0
-          if (L_qs(k)) xDs = smoc(k) / smob(k)
           if (xDs .gt. D0s) then
            idx = 1 + INT(nbs*DLOG(xDs/Ds(1))/DLOG(Ds(nbs)/Ds(1)))
            idx = MIN(idx, nbs)
            Ef_sw = t_Efsw(idx, INT(mvd_c(k)*1.E6))
            prs_scw(k) = rhof(k)*t1_qs_qc*Ef_sw*rc(k)*smoe(k)
+           prs_scw(k) = MIN(DBLE(rc(k)*odts), prs_scw(k))
            pnc_scw(k) = rhof(k)*t1_qs_qc*Ef_sw*nc(k)*smoe(k)                ! Qc2M
            pnc_scw(k) = MIN(DBLE(nc(k)*odts), pnc_scw(k))
           endif
@@ -2132,7 +2127,6 @@
 
 !..Snow and graupel collecting aerosols, wet scavenging.
          if (rs(k) .gt. r_s(1)) then
-          xDs = smoc(k) / smob(k)
           Ef_sa = Eff_aero(xDs,0.04E-6,visco(k),rho(k),temp(k),'s')
           pna_sca(k) = rhof(k)*t1_qs_qc*Ef_sa*nwfa(k)*smoe(k)
           pna_sca(k) = MIN(DBLE(nwfa(k)*odts), pna_sca(k))
@@ -2179,6 +2173,7 @@
                          + tnr_racs2(idx_s,idx_t,idx_r1,idx_r)          &
                          + tnr_sacr1(idx_s,idx_t,idx_r1,idx_r)          &
                          + tnr_sacr2(idx_s,idx_t,idx_r1,idx_r)
+            pnr_rcs(k) = MIN(DBLE(nr(k)*odts), pnr_rcs(k))
            else
             prs_rcs(k) = -tcs_racs1(idx_s,idx_t,idx_r1,idx_r)           &
                          - tms_sacr1(idx_s,idx_t,idx_r1,idx_r)          &
@@ -2186,10 +2181,7 @@
                          + tcr_sacr2(idx_s,idx_t,idx_r1,idx_r)
             prs_rcs(k) = MAX(DBLE(-rs(k)*odts), prs_rcs(k))
             prr_rcs(k) = -prs_rcs(k)
-            pnr_rcs(k) = tnr_racs2(idx_s,idx_t,idx_r1,idx_r)            &   ! RAIN2M
-                         + tnr_sacr2(idx_s,idx_t,idx_r1,idx_r)
            endif
-           pnr_rcs(k) = MIN(DBLE(nr(k)*odts), pnr_rcs(k))
           endif
 
 !..Rain collecting graupel.  Cannot assume Wisner (1972) approximation
@@ -2267,8 +2259,7 @@
            pnr_rfz(k) = MIN(DBLE(nr(k)*odts), pnr_rfz(k))
           elseif (rr(k).gt. R1 .and. temp(k).lt.HGFR) then
            pri_rfz(k) = rr(k)*odts
-           pnr_rfz(k) = nr(k)*odts                                         ! RAIN2M
-           pni_rfz(k) = pnr_rfz(k)
+           pni_rfz(k) = nr(k)*odts                                         ! RAIN2M
           endif
 
           if (rc(k).gt. r_c(1)) then
@@ -2299,7 +2290,7 @@
 
 !..Freezing of aqueous aerosols based on Koop et al (2001, Nature)
           xni = smo0(k)+ni(k) + (pni_rfz(k)+pni_wfz(k)+pni_inu(k))*dtsave
-          if (is_aerosol_aware .AND. homogIce .AND. (xni.le.500.E3)     &
+          if (is_aerosol_aware .AND. homogIce .AND. (xni.le.999.E3)     &
      &                .AND.(temp(k).lt.238).AND.(ssati(k).ge.0.4) ) then
             xnc = iceKoop(temp(k),qv(k),qvs(k),nwfa(k), dtsave)
             pni_iha(k) = xnc*odts
@@ -2422,7 +2413,7 @@
                          prs_sde(k).gt.eps) then
            r_frac = MIN(30.0D0, prs_scw(k)/prs_sde(k))
            g_frac = MIN(0.95, 0.15 + (r_frac-2.)*.028)
-           vts_boost(k) = MIN(1.5, 1.1 + (r_frac-2.)*.016)
+           vts_boost(k) = MIN(1.5, 1.1 + (r_frac-2.)*.014)
            prg_scw(k) = g_frac*prs_scw(k)
            prs_scw(k) = (1. - g_frac)*prs_scw(k)
           endif
@@ -2434,12 +2425,13 @@
           if (L_qs(k)) then
            prr_sml(k) = (tempc*tcond(k)-lvap0*diffu(k)*delQvs(k))       &
                       * (t1_qs_me*smo1(k) + t2_qs_me*rhof2(k)*vsc2(k)*smof(k))
-           prr_sml(k) = prr_sml(k) + 4218.*olfus*tempc &
-                                   * (prr_rcs(k)+prs_scw(k))
+           if (prr_sml(k) .gt. 0.) then
+              prr_sml(k) = prr_sml(k) + 4218.*olfus*tempc               &
+                                      * (prr_rcs(k)+prs_scw(k))
+           endif
            prr_sml(k) = MIN(DBLE(rs(k)*odts), MAX(0.D0, prr_sml(k)))
            pnr_sml(k) = smo0(k)/rs(k)*prr_sml(k) * 10.0**(-0.25*tempc)      ! RAIN2M
            pnr_sml(k) = MIN(DBLE(smo0(k)*odts), pnr_sml(k))
-!          if (tempc.gt.3.5 .or. rs(k).lt.0.005E-3) pnr_sml(k)=0.0
 
            if (ssati(k).lt. 0.) then
             prs_sde(k) = C_cube*t1_subl*diffu(k)*ssati(k)*rvs &
@@ -2458,7 +2450,6 @@
            prr_gml(k) = MIN(DBLE(rg(k)*odts), MAX(0.D0, prr_gml(k)))
            pnr_gml(k) = N0_g(k)*cgg(2)*ilamg(k)**cge(2) / rg(k)         &   ! RAIN2M
                       * prr_gml(k) * 10.0**(-0.5*tempc)
-!          if (tempc.gt.7.5 .or. rg(k).lt.0.005E-3) pnr_gml(k)=0.0
 
            if (ssati(k).lt. 0.) then
             prg_gde(k) = C_cube*t1_subl*diffu(k)*ssati(k)*rvs &
@@ -2667,7 +2658,7 @@
            xDi = (bm_i + mu_i + 1.) * ilami
            if (xDi.lt. 5.E-6) then
             lami = cie(2)/5.E-6
-            xni = MIN(499.D3, cig(1)*oig2*xri/am_i*lami**bm_i)
+            xni = MIN(9999.D3, cig(1)*oig2*xri/am_i*lami**bm_i)
             niten(k) = (xni-ni1d(k)*rho(k))*odts*orho
            elseif (xDi.gt. 300.E-6) then
             lami = cie(2)/300.E-6
@@ -2678,8 +2669,8 @@
           niten(k) = -ni1d(k)*odts
          endif
          xni=MAX(0.,(ni1d(k) + niten(k)*dtsave)*rho(k))
-         if (xni.gt.499.E3) &
-                niten(k) = (499.E3-ni1d(k)*rho(k))*odts*orho
+         if (xni.gt.9999.E3) &
+                niten(k) = (9999.E3-ni1d(k)*rho(k))*odts*orho
 
 !..Rain tendency
          qrten(k) = qrten(k) + (prr_wau(k) + prr_rcw(k) &
@@ -2691,7 +2682,7 @@
 !..Rain number tendency
          nrten(k) = nrten(k) + (pnr_wau(k) + pnr_sml(k) + pnr_gml(k)    &
                       - (pnr_rfz(k) + pnr_rcr(k) + pnr_rcg(k)           &
-                      + pnr_rcs(k) + pnr_rci(k)) )                      &
+                      + pnr_rcs(k) + pnr_rci(k) + pni_rfz(k)) )         &
                       * orho
 
 !..Rain mass/number balance; keep median volume diameter between
@@ -2779,7 +2770,9 @@
          lvt2(k)=lvap(k)*lvap(k)*ocp(k)*oRv*otemp*otemp
 
          nwfa(k) = MAX(11.1E6, (nwfa1d(k) + nwfaten(k)*DT)*rho(k))
+      enddo
 
+      do k = kts, kte
          if ((qc1d(k) + qcten(k)*DT) .gt. R1) then
             rc(k) = (qc1d(k) + qcten(k)*DT)*rho(k)
             nc(k) = MAX(2., MIN((nc1d(k)+ncten(k)*DT)*rho(k), Nt_c_max))
@@ -2904,23 +2897,12 @@
 !+---+-----------------------------------------------------------------+
 !..Calculate y-intercept, slope values for graupel.
 !+---+-----------------------------------------------------------------+
-      N0_min = gonv_max
-      k_0 = kts
+
       do k = kte, kts, -1
-         if (temp(k).ge.270.65) k_0 = MAX(k_0, k)
-      enddo
-      do k = kte, kts, -1
-         if (k.gt.k_0 .and. L_qr(k) .and. mvd_r(k).gt.100.E-6) then
-            xslw1 = 4.01 + alog10(mvd_r(k))
-         else
-            xslw1 = 0.01
-         endif
-         ygra1 = 4.31 + alog10(max(5.E-5, rg(k)))
-         zans1 = 3.1 + (100./(300.*xslw1*ygra1/(10./xslw1+1.+0.25*ygra1)+30.+10.*ygra1))
+         ygra1 = alog10(max(1.E-9, rg(k)))
+         zans1 = (3.5 + 2./7. * (ygra1+7.))
+         zans1 = MAX(2., MIN(zans1, 7.))
          N0_exp = 10.**(zans1)
-         N0_exp = MAX(DBLE(gonv_min), MIN(N0_exp, DBLE(gonv_max)))
-         N0_min = MIN(N0_exp, N0_min)
-         N0_exp = N0_min
          lam_exp = (N0_exp*am_g*cgg(1)/rg(k))**oge1
          lamg = lam_exp * (cgg(3)*ogg2*ogg1)**obmg
          ilamg(k) = 1./lamg
@@ -3033,6 +3015,7 @@
           nwfaten(k) = nwfaten(k) - pnc_wcd(k)
           tten(k) = tten(k) + lvap(k)*ocp(k)*prw_vcd(k)*(1-IFDRY)
           rc(k) = MAX(R1, (qc1d(k) + DT*qcten(k))*rho(k))
+          if (rc(k).eq.R1) L_qc(k) = .false.
           nc(k) = MAX(2., MIN((nc1d(k)+ncten(k)*DT)*rho(k), Nt_c_max))
           if (.NOT. is_aerosol_aware) nc(k) = Nt_c
           qv(k) = MAX(1.E-10, qv1d(k) + DT*qvten(k))
@@ -3094,7 +3077,7 @@
           prv_rev(k) = MIN(DBLE(rate_max), prv_rev(k)*orho)
 
 !..TEST: G. Thompson  10 May 2013
-!..Reduce the rain evaporation in same places as melting graupel occurs. 
+!..Reduce the rain evaporation in same places as melting graupel occurs.
 !..Rationale: falling and simultaneous melting graupel in subsaturated
 !..regions will not melt as fast because particle temperature stays
 !..at 0C.  Also not much shedding of the water from the graupel so
@@ -3154,6 +3137,8 @@
          vtck(k) = 0.
          vtnck(k) = 0.
       enddo
+
+      if (ANY(L_qr .eqv. .true.)) then
       do k = kte, kts, -1
          vtr = 0.
          rhof(k) = SQRT(RHO_NOT/rho(k))
@@ -3184,9 +3169,11 @@
       enddo
       if (ksed1(1) .eq. kte) ksed1(1) = kte-1
       if (nstep .gt. 0) onstep(1) = 1./REAL(nstep)
+      endif
 
 !+---+-----------------------------------------------------------------+
 
+      if (ANY(L_qc .eqv. .true.)) then
       hgt_agl = 0.
       do k = kts, kte-1
          if (rc(k) .gt. R2) ksed1(5) = k
@@ -3207,11 +3194,13 @@
           vtnck(k) = vtc
          endif
       enddo
+      endif
 
 !+---+-----------------------------------------------------------------+
 
       if (.not. iiwarm) then
 
+       if (ANY(L_qi .eqv. .true.)) then
        nstep = 0
        do k = kte, kts, -1
           vti = 0.
@@ -3239,9 +3228,11 @@
        enddo
        if (ksed1(2) .eq. kte) ksed1(2) = kte-1
        if (nstep .gt. 0) onstep(2) = 1./REAL(nstep)
+       endif
 
 !+---+-----------------------------------------------------------------+
 
+       if (ANY(L_qs .eqv. .true.)) then
        nstep = 0
        do k = kte, kts, -1
           vts = 0.
@@ -3259,8 +3250,8 @@
            t4_vts = Kap1*Mrat**mu_s*csg(7)*ils2**cse(7)
            vts = rhof(k)*av_s * (t1_vts+t2_vts)/(t3_vts+t4_vts)
            if (temp(k).gt. (T_0+0.1)) then
-            vtsk(k) = MAX(vts*vts_boost(k),                             &
-     &                vts*((vtrk(k)-vts*vts_boost(k))/(temp(k)-T_0)))
+            SR = rs(k)/(rs(k)+rr(k))
+            vtsk(k) = vts*SR + (1.-SR)*vtrk(k)
            else
             vtsk(k) = vts*vts_boost(k)
            endif
@@ -3276,9 +3267,11 @@
        enddo
        if (ksed1(3) .eq. kte) ksed1(3) = kte-1
        if (nstep .gt. 0) onstep(3) = 1./REAL(nstep)
+       endif
 
 !+---+-----------------------------------------------------------------+
 
+       if (ANY(L_qg .eqv. .true.)) then
        nstep = 0
        do k = kte, kts, -1
           vtg = 0.
@@ -3302,18 +3295,16 @@
        enddo
        if (ksed1(4) .eq. kte) ksed1(4) = kte-1
        if (nstep .gt. 0) onstep(4) = 1./REAL(nstep)
+       endif
       endif
 
 !+---+-----------------------------------------------------------------+
 !..Sedimentation of mixing ratio is the integral of v(D)*m(D)*N(D)*dD,
 !.. whereas neglect m(D) term for number concentration.  Therefore,
 !.. cloud ice has proper differential sedimentation.
-!.. New in v3.0+ is computing separate for rain, ice, snow, and
-!.. graupel species thus making code faster with credit to J. Schmidt.
-!.. Bug fix, 2013Nov01 to tendencies using rho(k+1) correction thanks to
-!.. Eric Skyllingstad.
 !+---+-----------------------------------------------------------------+
 
+      if (ANY(L_qr .eqv. .true.)) then
       nstep = NINT(1./onstep(1))
       do n = 1, nstep
          do k = kte, kts, -1
@@ -3340,12 +3331,14 @@
                                            *odzq*DT*onstep(1))
          enddo
 
-         if (rr(kts).gt.R1*10.) &
+         if (rr(kts).gt.R1*1000.) &
          pptrain = pptrain + sed_r(kts)*DT*onstep(1)
       enddo
+      endif
 
 !+---+-----------------------------------------------------------------+
 
+      if (ANY(L_qc .eqv. .true.)) then
       do k = kte, kts, -1
          sed_c(k) = vtck(k)*rc(k)
          sed_n(k) = vtnck(k)*nc(k)
@@ -3358,9 +3351,11 @@
          rc(k) = MAX(R1, rc(k) + (sed_c(k+1)-sed_c(k)) *odzq*DT)
          nc(k) = MAX(10., nc(k) + (sed_n(k+1)-sed_n(k)) *odzq*DT)
       enddo
+      endif
 
 !+---+-----------------------------------------------------------------+
 
+      if (ANY(L_qi .eqv. .true.)) then
       nstep = NINT(1./onstep(2))
       do n = 1, nstep
          do k = kte, kts, -1
@@ -3387,12 +3382,14 @@
                                            *odzq*DT*onstep(2))
          enddo
 
-         if (ri(kts).gt.R1*10.) &
+         if (ri(kts).gt.R1*1000.) &
          pptice = pptice + sed_i(kts)*DT*onstep(2)
       enddo
+      endif
 
 !+---+-----------------------------------------------------------------+
 
+      if (ANY(L_qs .eqv. .true.)) then
       nstep = NINT(1./onstep(3))
       do n = 1, nstep
          do k = kte, kts, -1
@@ -3412,12 +3409,14 @@
                                            *odzq*DT*onstep(3))
          enddo
 
-         if (rs(kts).gt.R1*10.) &
+         if (rs(kts).gt.R1*1000.) &
          pptsnow = pptsnow + sed_s(kts)*DT*onstep(3)
       enddo
+      endif
 
 !+---+-----------------------------------------------------------------+
 
+      if (ANY(L_qg .eqv. .true.)) then
       nstep = NINT(1./onstep(4))
       do n = 1, nstep
          do k = kte, kts, -1
@@ -3437,9 +3436,10 @@
                                            *odzq*DT*onstep(4))
          enddo
 
-         if (rg(kts).gt.R1*10.) &
+         if (rg(kts).gt.R1*1000.) &
          pptgraul = pptgraul + sed_g(kts)*DT*onstep(4)
       enddo
+      endif
 
 !+---+-----------------------------------------------------------------+
 !.. Instantly melt any cloud ice into cloud water if above 0C and
@@ -3477,9 +3477,9 @@
          qv1d(k) = MAX(1.E-10, qv1d(k) + qvten(k)*DT)
          qc1d(k) = qc1d(k) + qcten(k)*DT
          nc1d(k) = MAX(2./rho(k), MIN(nc1d(k) + ncten(k)*DT, Nt_c_max))
-         nwfa1d(k) = MAX(11.1E6/rho(k), MIN(9999.E6/rho(k),             &
+         nwfa1d(k) = MAX(11.1E6, MIN(9999.E6,                           &
                        (nwfa1d(k)+nwfaten(k)*DT)))
-         nifa1d(k) = MAX(naIN1*0.01, MIN(9999.E6/rho(k),                &
+         nifa1d(k) = MAX(naIN1*0.01, MIN(9999.E6,                       &
                        (nifa1d(k)+nifaten(k)*DT)))
 
          if (qc1d(k) .le. R1) then
@@ -3513,7 +3513,7 @@
             lami = cie(2)/300.E-6
            endif
            ni1d(k) = MIN(cig(1)*oig2*qi1d(k)/am_i*lami**bm_i,           &
-                         499.D3/rho(k))
+                         9999.D3/rho(k))
          endif
          qr1d(k) = qr1d(k) + qrten(k)*DT
          nr1d(k) = MAX(R2/rho(k), nr1d(k) + nrten(k)*DT)
@@ -3569,10 +3569,10 @@
 
       good = 0
       IF ( wrf_dm_on_monitor() ) THEN
-        INQUIRE(FILE="qr_acr_qg.dat",EXIST=lexist)
+        INQUIRE(FILE="qr_acr_qgV2.dat",EXIST=lexist)
         IF ( lexist ) THEN
-          CALL wrf_message("ThompMP: read qr_acr_qg.dat instead of computing")
-          OPEN(63,file="qr_acr_qg.dat",form="unformatted",err=1234)
+          CALL wrf_message("ThompMP: read qr_acr_qgV2.dat instead of computing")
+          OPEN(63,file="qr_acr_qgV2.dat",form="unformatted",err=1234)
           READ(63,err=1234) tcg_racg
           READ(63,err=1234) tmr_racg
           READ(63,err=1234) tcr_gacr
@@ -3585,23 +3585,23 @@
             INQUIRE(63,opened=lopen)
             IF (lopen) THEN
               IF( force_read_thompson ) THEN
-                CALL wrf_error_fatal("Error reading qr_acr_qg.dat. Aborting because force_read_thompson is .true.")
+                CALL wrf_error_fatal("Error reading qr_acr_qgV2.dat. Aborting because force_read_thompson is .true.")
               ENDIF
               CLOSE(63)
             ELSE
               IF( force_read_thompson ) THEN
-                CALL wrf_error_fatal("Error opening qr_acr_qg.dat. Aborting because force_read_thompson is .true.")
+                CALL wrf_error_fatal("Error opening qr_acr_qgV2.dat. Aborting because force_read_thompson is .true.")
               ENDIF
             ENDIF
-         ELSE
-            INQUIRE(63,opened=lopen)
+          ELSE
+            INQUIRE(63,OPENED=lopen)
             IF (lopen) THEN
               CLOSE(63)
             ENDIF
           ENDIF
         ELSE
           IF( force_read_thompson ) THEN
-            CALL wrf_error_fatal("Non-existent qr_acr_qg.dat. Aborting because force_read_thompson is .true.")
+            CALL wrf_error_fatal("Non-existent qr_acr_qgV2.dat. Aborting because force_read_thompson is .true.")
           ENDIF
         ENDIF
       ENDIF
@@ -3693,7 +3693,8 @@
             tcg_racg(i,j,k,m) = t1
             tmr_racg(i,j,k,m) = DMIN1(z1, r_r(m)*1.0d0)
             tcr_gacr(i,j,k,m) = t2
-            tmg_gacr(i,j,k,m) = z2
+            tmg_gacr(i,j,k,m) = DMIN1(z2, r_g(j)*1.0d0)
+            !DAVE tmg_gacr(i,j,k,m) = DMIN1(z2, DBLE(r_g(j)))
             tnr_racg(i,j,k,m) = y1
             tnr_gacr(i,j,k,m) = y2
          enddo
@@ -3712,8 +3713,8 @@
 #endif
 
         IF ( write_thompson_tables .AND. wrf_dm_on_monitor() ) THEN
-          CALL wrf_message("Writing qr_acr_qg.dat in Thompson MP init")
-          OPEN(63,file="qr_acr_qg.dat",form="unformatted",err=9234)
+          CALL wrf_message("Writing qr_acr_qgV2.dat in Thompson MP init")
+          OPEN(63,file="qr_acr_qgV2.dat",form="unformatted",err=9234)
           WRITE(63,err=9234) tcg_racg
           WRITE(63,err=9234) tmr_racg
           WRITE(63,err=9234) tcr_gacr
@@ -3723,7 +3724,7 @@
           CLOSE(63)
           RETURN    ! ----- RETURN
  9234     CONTINUE
-          CALL wrf_error_fatal("Error writing qr_acr_qg.dat")
+          CALL wrf_error_fatal("Error writing qr_acr_qgV2.dat")
         ENDIF
       ENDIF
 
@@ -3760,10 +3761,10 @@
 
       good = 0
       IF ( wrf_dm_on_monitor() ) THEN
-        INQUIRE(FILE="qr_acr_qs.dat",EXIST=lexist)
+        INQUIRE(FILE="qr_acr_qsV2.dat",EXIST=lexist)
         IF ( lexist ) THEN
-          CALL wrf_message("ThompMP: read qr_acr_qs.dat instead of computing")
-          OPEN(63,file="qr_acr_qs.dat",form="unformatted",err=1234)
+          CALL wrf_message("ThompMP: read qr_acr_qsV2.dat instead of computing")
+          OPEN(63,file="qr_acr_qsV2.dat",form="unformatted",err=1234)
           READ(63,err=1234)tcs_racs1
           READ(63,err=1234)tmr_racs1
           READ(63,err=1234)tcs_racs2
@@ -3782,12 +3783,12 @@
             INQUIRE(63,opened=lopen)
             IF (lopen) THEN
               IF( force_read_thompson ) THEN
-                CALL wrf_error_fatal("Error reading qr_acr_qs.dat. Aborting because force_read_thompson is .true.")
+                CALL wrf_error_fatal("Error reading qr_acr_qsV2.dat. Aborting because force_read_thompson is .true.")
               ENDIF
               CLOSE(63)
             ELSE
               IF( force_read_thompson ) THEN
-                CALL wrf_error_fatal("Error opening qr_acr_qs.dat. Aborting because force_read_thompson is .true.")
+                CALL wrf_error_fatal("Error opening qr_acr_qsV2.dat. Aborting because force_read_thompson is .true.")
               ENDIF
             ENDIF
           ELSE
@@ -3798,7 +3799,7 @@
           ENDIF
         ELSE
           IF( force_read_thompson ) THEN
-            CALL wrf_error_fatal("Non-existent qr_acr_qs.dat. Aborting because force_read_thompson is .true.")
+            CALL wrf_error_fatal("Non-existent qr_acr_qsV2.dat. Aborting because force_read_thompson is .true.")
           ENDIF
         ENDIF
       ENDIF
@@ -3991,8 +3992,8 @@
 #endif
 
         IF ( write_thompson_tables .AND. wrf_dm_on_monitor() ) THEN
-          CALL wrf_message("Writing qr_acr_qs.dat in Thompson MP init")
-          OPEN(63,file="qr_acr_qs.dat",form="unformatted",err=9234)
+          CALL wrf_message("Writing qr_acr_qsV2.dat in Thompson MP init")
+          OPEN(63,file="qr_acr_qsV2.dat",form="unformatted",err=9234)
           WRITE(63,err=9234)tcs_racs1
           WRITE(63,err=9234)tmr_racs1
           WRITE(63,err=9234)tcs_racs2
@@ -4008,7 +4009,7 @@
           CLOSE(63)
           RETURN    ! ----- RETURN
  9234     CONTINUE
-          CALL wrf_error_fatal("Error writing qr_acr_qs.dat")
+          CALL wrf_error_fatal("Error writing qr_acr_qsV2.dat")
         ENDIF
       ENDIF
 
@@ -4926,7 +4927,7 @@
 !        mux = hx*p_alpha*n_in*rho
 !        xni = mux*((6700.*nifa)-200.)/((6700.*5.E5)-200.)
 !     elseif (satw.ge.0.985 .and. tempc.gt.HGFR-273.15) then
-         nifa_cc = nifa*RHO_NOT0*1.E-6/rho
+         nifa_cc = MAX(0.5, nifa*RHO_NOT0*1.E-6/rho)
 !        xni  = 3.*nifa_cc**(1.25)*exp((0.46*(-tempc))-11.6)              !  [DeMott, 2015]
          xni = (5.94e-5*(-tempc)**3.33)                                 & !  [DeMott, 2010]
                     * (nifa_cc**((-0.0264*(tempc))+0.0033))
@@ -5216,6 +5217,14 @@
 !..Calculate y-intercept, slope, and useful moments for snow.
 !+---+-----------------------------------------------------------------+
       do k = kts, kte
+         smo2(k) = 0.
+         smob(k) = 0.
+         smoc(k) = 0.
+         smoz(k) = 0.
+      enddo
+      if (ANY(L_qs .eqv. .true.)) then
+      do k = kts, kte
+         if (.not. L_qs(k)) CYCLE
          tc0 = MIN(-0.1, temp(k)-273.15)
          smob(k) = rs(k)*oams
 
@@ -5264,33 +5273,24 @@
      &        + sb(9)*tc0*tc0*tc0 + sb(10)*cse(3)*cse(3)*cse(3)
          smoz(k) = a_ * smo2(k)**b_
       enddo
+      endif
 
 !+---+-----------------------------------------------------------------+
 !..Calculate y-intercept, slope values for graupel.
 !+---+-----------------------------------------------------------------+
 
-      N0_min = gonv_max
-      k_0 = kts
+      if (ANY(L_qg .eqv. .true.)) then
       do k = kte, kts, -1
-         if (temp(k).ge.270.65) k_0 = MAX(k_0, k)
-      enddo
-      do k = kte, kts, -1
-         if (k.gt.k_0 .and. L_qr(k) .and. mvd_r(k).gt.100.E-6) then
-            xslw1 = 4.01 + alog10(mvd_r(k))
-         else
-            xslw1 = 0.01
-         endif
-         ygra1 = 4.31 + alog10(max(5.E-5, rg(k)))
-         zans1 = 3.1 + (100./(300.*xslw1*ygra1/(10./xslw1+1.+0.25*ygra1)+30.+10.*ygra1))
+         ygra1 = alog10(max(1.E-9, rg(k)))
+         zans1 = (3.5 + 2./7. * (ygra1+7.))
+         zans1 = MAX(2., MIN(zans1, 7.))
          N0_exp = 10.**(zans1)
-         N0_exp = MAX(DBLE(gonv_min), MIN(N0_exp, DBLE(gonv_max)))
-         N0_min = MIN(N0_exp, N0_min)
-         N0_exp = N0_min
          lam_exp = (N0_exp*am_g*cgg(1)/rg(k))**oge1
          lamg = lam_exp * (cgg(3)*ogg2*ogg1)**obmg
          ilamg(k) = 1./lamg
          N0_g(k) = N0_exp/(cgg(2)*lam_exp) * lamg**cge(2)
       enddo
+      endif
 
 !+---+-----------------------------------------------------------------+
 !..Locate K-level of start of melting (k_0 is level above).

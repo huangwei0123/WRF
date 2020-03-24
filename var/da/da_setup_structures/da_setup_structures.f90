@@ -12,7 +12,8 @@ module da_setup_structures
       multi_level_type,each_level_type, da_allocate_observations_rain
    use da_define_structures, only : da_allocate_obs_info, da_allocate_y, da_allocate_y_radar, &
       da_allocate_y_rain
-   use da_wrf_interfaces, only : wrf_debug
+   use da_wrf_interfaces, only : wrf_debug, &
+      wrf_dm_bcast_string, wrf_dm_bcast_integer, wrf_dm_bcast_real
    use da_control, only : trace_use,vert_evalue,stdout,rootproc, myproc, &
       analysis_date,coarse_ix,coarse_ds,map_projection,coarse_jy, c2,dsm,phic, &
       pole, cone_factor, start_x,base_pres,ptop,psi1,start_y, base_lapse,base_temp,truelat2_3dv, &
@@ -30,7 +31,7 @@ module da_setup_structures
       use_ssmt1obs,use_ssmt2obs, use_shipsobs, use_satemobs, use_synopobs, &
       use_radar_rv,use_profilerobs, use_obsgts, use_geoamvobs, use_buoyobs, &
       jb_factor, je_factor, alphacv_method,its,ite,jts,jte,cv_size_domain_jb, cv_size_domain_jl, &
-      cv_size_domain_je, cv_size_domain,ensdim_alpha, alpha_vertloc, alpha_hydrometeors, &
+      cv_size_domain_je, cv_size_domain,ensdim_alpha, alpha_vertloc_opt, alpha_hydrometeors, &
       lat_stats_option,alpha_std_dev,sigma_alpha,alpha_corr_scale, &
       len_scaling1, len_scaling2, len_scaling3, len_scaling4, len_scaling5,&
       len_scaling6, len_scaling7, len_scaling8, len_scaling9, &
@@ -45,7 +46,7 @@ module da_setup_structures
       vert_corr,max_vert_var5,power_truncation,alpha_truncation, &
       print_detail_regression,gas_constant, use_airsretobs, &
       filename_len, use_ssmisobs, gravity, t_triple, use_hirs4obs, use_mhsobs, &
-      use_mwtsobs, use_mwhsobs, use_atmsobs,    &
+      use_mwtsobs, use_mwhsobs, use_mwhs2obs, use_atmsobs, &
       vert_corr_2, alphacv_method_xa, vert_evalue_global, &
       vert_evalue_local, obs_names, thin_conv, thin_conv_ascii, &
       sound, sonde_sfc, mtgirs, tamdar, tamdar_sfc, synop, profiler, gpsref, gpspw, polaramv, geoamv, ships, metar, &
@@ -54,7 +55,7 @@ module da_setup_structures
       use_simulated_rad, use_pseudo_rad, pseudo_rad_platid, pseudo_rad_satid, &
       pseudo_rad_senid, rtminit_nsensor, rtminit_platform, rtminit_satid, &
       rtminit_sensor, thinning, qc_rad, var4d, & 
-      num_pseudo,pseudo_x, pseudo_y, pseudo_z, pseudo_var,pseudo_val, pseudo_err,&
+      num_pseudo,pseudo_x, pseudo_y, pseudo_z, pseudo_var,pseudo_val, pseudo_err, pseudo_time, &
       fg_format, fg_format_wrf_arw_regional,fg_format_wrf_nmm_regional, &
       fg_format_wrf_arw_global, fg_format_kma_global, deg_to_rad, rad_to_deg, &
       sonde_sfc, missing_data, missing_r, qc_good, thin_mesh_conv, time_slots, ifgat_ana, &
@@ -66,11 +67,12 @@ module da_setup_structures
       chi_u_t_factor, chi_u_ps_factor,chi_u_rh_factor, t_u_rh_factor, ps_u_rh_factor, &
       interpolate_stats, be_eta, thin_rainobs, fgat_rain_flags, use_iasiobs, &
       use_seviriobs, jds_int, jde_int, anal_type_hybrid_dual_res, use_amsr2obs, nrange, use_4denvar, &
-      use_goesimgobs
+      use_goesimgobs, use_ahiobs
    use da_control, only: rden_bin, use_lsac
    use da_control, only: use_cv_w
    use da_control, only: pseudo_tpw, pseudo_ztd, pseudo_ref, pseudo_uvtpq, pseudo_elv, anal_type_qcobs
    use da_control, only: use_gpsephobs, gpseph_loadbalance, gpseph
+   use da_control, only: ep_format
 
    use da_obs, only : da_fill_obs_structures, da_store_obs_grid_info, da_store_obs_grid_info_rad, &
                       da_fill_obs_structures_rain, da_fill_obs_structures_radar, da_set_obs_missing,da_set_3d_obs_missing
@@ -90,7 +92,7 @@ module da_setup_structures
    use da_ssmi, only : da_read_obs_ssmi,da_scan_obs_ssmi
    use da_tools_serial, only : da_get_unit, da_free_unit, da_array_print, da_find_fft_factors, &
       da_find_fft_trig_funcs
-   use da_tools, only: da_get_time_slots, da_1d_eigendecomposition
+   use da_tools, only: da_get_time_slots, da_1d_eigendecomposition, da_eof_decomposition
    use da_tracing, only : da_trace_entry, da_trace_exit
    use da_vtox_transforms, only : da_check_eof_decomposition
    use da_rfz_cv3, only : da_rfz0
@@ -126,6 +128,8 @@ contains
 #include "da_chgvres.inc"
 #include "da_setup_flow_predictors.inc"
 #include "da_setup_flow_predictors_para_read_opt1.inc"
+#include "da_setup_flow_predictors_ep_format2.inc"
+#include "da_setup_flow_predictors_ep_format3.inc"
 #include "da_setup_obs_structures.inc"
 #include "da_setup_obs_structures_ascii.inc"
 #include "da_setup_obs_structures_bufr.inc"
@@ -147,5 +151,6 @@ contains
 #include "da_chg_be_Vres.inc"
 #include "da_gen_eigen.inc"
 #include "da_eigen_to_covmatrix.inc"
+#include "da_get_alpha_vertloc.inc"
 
 end module da_setup_structures

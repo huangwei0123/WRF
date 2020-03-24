@@ -20,8 +20,8 @@ module da_radiance1
       rtm_option_rttov,rtm_option_crtm, radiance, only_sea_rad, &
       global, gas_constant, gravity, monitor_on,kts,kte,use_rttov_kmatrix, &
       use_pseudo_rad, pi, t_triple, crtm_cloud, DT_cloud_model,write_jacobian, &
-      use_crtm_kmatrix,use_clddet_mmr, use_satcv, cv_size_domain, &
-      cv_size_domain_js, calc_weightfunc, use_clddet_ecmwf, deg_to_rad, rad_to_deg
+      use_crtm_kmatrix,use_clddet, use_satcv, cv_size_domain, &
+      cv_size_domain_js, calc_weightfunc, deg_to_rad, rad_to_deg
    use da_define_structures, only : info_type,model_loc_type,maxmin_type, &
       iv_type, y_type, jo_type,bad_data_type,bad_data_type,number_type, &
       be_type
@@ -33,6 +33,7 @@ module da_radiance1
    use da_tools, only : da_residual_new, da_eof_decomposition
    use da_tools_serial, only : da_free_unit, da_get_unit
    use da_tracing, only : da_trace_entry, da_trace_exit, da_trace_int_sort
+   use da_wrf_interfaces, only : wrf_dm_bcast_integer
 
 #if defined(RTTOV) || defined(CRTM)
    use da_control, only : rtminit_sensor,write_profile,num_procs,tovs_min_transfer
@@ -60,6 +61,8 @@ module da_radiance1
       real               ::   smois, tslb, snowh, elevation,soiltyp,vegtyp,vegfra
       real               ::   clw
       integer            ::   isflg
+      integer            ::   cloudflag
+
 !      real,    pointer   ::   tb_xb(:)
       real, pointer             :: tb_ob(:)
       real, pointer             :: tb_inv(:)
@@ -89,6 +92,7 @@ module da_radiance1
       real   ,  pointer  ::  ciw(:)   ! kg/kg
       real   ,  pointer  ::  rain(:)  ! kg/m2/s
       real   ,  pointer  ::  sp(:)    ! kg/m2/s
+     integer ,  pointer  ::  cloudflag(:)
    end type con_cld_vars_type
 
    type aux_vars_type
@@ -176,6 +180,7 @@ module da_radiance1
       real,    pointer   :: solidp(:)     ! solid precipitation rate in kg/m2/s
       real,    pointer   :: clw(:)        ! cloud liquid water (kg/kg)
       real,    pointer   :: ciw(:)        ! cloud ice water    (kg/kg)
+      integer, pointer   :: cloudflag(:)  ! cloud flag
 
    end type rad_data_type
 
@@ -219,8 +224,7 @@ contains
 #include "da_qc_crtm.inc"
 #endif
 #include "da_cloud_sim.inc"
-#include "da_cloud_detect_airs.inc"
-#include "da_cloud_detect_iasi.inc"
+#include "da_cloud_detect.inc"
 #include "da_qc_airs.inc"
 #include "da_qc_amsua.inc"
 #include "da_qc_amsub.inc"
@@ -230,9 +234,11 @@ contains
 #include "da_qc_mhs.inc"
 #include "da_qc_mwts.inc"
 #include "da_qc_mwhs.inc"
+#include "da_qc_mwhs2.inc"
 #include "da_qc_atms.inc"
 #include "da_qc_seviri.inc"
 #include "da_qc_amsr2.inc"
+#include "da_qc_ahi.inc"
 #include "da_qc_goesimg.inc"
 #include "da_write_iv_rad_ascii.inc"
 #include "da_write_oa_rad_ascii.inc"

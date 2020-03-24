@@ -34,6 +34,7 @@ MODULE MODULE_mpp_ReachLS
 
   interface ReachLS_decomp
      module procedure ReachLS_decompReal
+     module procedure ReachLS_decompReal8
      module procedure ReachLS_decompInt 
      module procedure ReachLS_decompChar
   end interface
@@ -41,6 +42,7 @@ MODULE MODULE_mpp_ReachLS
   interface ReachLS_write_io
      module procedure ReachLS_wReal
      module procedure ReachLS_wReal2
+     module procedure ReachLS_wReal8
      module procedure ReachLS_wInt
      module procedure ReachLS_wInt2
      module procedure ReachLS_wChar
@@ -344,6 +346,9 @@ MODULE MODULE_mpp_ReachLS
        integer, dimension(:) :: LINKID, LLINKID
        integer :: i,k, glinksl, ierr
        integer :: gLinkId(glinksl)
+       integer :: cache_idx, cache_block
+       integer :: cache_block_begin, cache_block_end
+
        LLINKLEN = size(LLINKID,1)
        allocate(LLINKIDINDX(LLINKLEN))
        LLINKIDINDX = 0
@@ -354,15 +359,19 @@ MODULE MODULE_mpp_ReachLS
        call mpi_bcast(gLinkId(1:glinksl),glinksl,MPI_INTEGER,   &
             IO_id,HYDRO_COMM_WORLD,ierr)
 
-       do i = 1, LLINKLEN
-           do k = 1, glinksl
-               if(LLINKID(i) .eq. gLinkId(k)) then
-                    LLINKIDINDX(i) = k
-                    goto 1001
-               endif
-           end do
-1001       continue
-       end do 
+       cache_block = 256
+       do cache_idx = 0, glinksl - 1, cache_block
+          cache_block_begin = cache_idx + 1
+          cache_block_end = min(cache_idx + cache_block, glinksl)
+          do i = 1, LLINKLEN
+             if(LLINKIDINDX(i) /= 0) cycle
+             do k = cache_block_begin, cache_block_end
+                if(LLINKID(i) .eq. gLinkId(k)) then
+                   LLINKIDINDX(i) = k
+                endif
+             end do
+          end do
+       end do
        
        call mpp_land_sync()
   end subroutine getLocalIndx
@@ -479,6 +488,36 @@ MODULE MODULE_mpp_ReachLS
       call mpp_land_sync()
   END subroutine ReachLS_decompReal
 
+  subroutine ReachLS_decompReal8(inV,outV)
+      implicit none
+      real*8,intent(in),dimension(:) :: inV
+      real*8,intent(out),dimension(:) :: outV
+      integer ::  i, ierr, tag
+      tag = 11
+      if(my_id .eq. io_id) then
+         do i = 1, numprocs
+            if(i-1 .eq. io_id) then
+                if(alinksl(i) .gt. 0) then
+                   outV(1:(linkls_e(i)-linkls_s(i)+1) ) = inV(linkls_s(i):linkls_e(i))
+                endif
+            else
+                if(aLinksl(i) .gt. 0) then
+                    call mpi_send(inV(linkls_s(i):linkls_e(i)), &
+                        aLinksl(i), &
+                        MPI_REAL8, i-1 ,tag,HYDRO_COMM_WORLD,ierr)
+                endif
+            endif
+         end do
+      else
+         if(aLinksl(my_id+1) .gt. 0) then
+             call mpi_recv(outV(1:(linkls_e(my_id+1)-linkls_s(my_id+1)+1) ), &  !! this one has +1!
+              aLinksl(my_id+1),                                        &
+              MPI_REAL8, io_id,tag,HYDRO_COMM_WORLD,mpp_status,ierr)
+         endif
+      endif
+      call mpp_land_sync()
+      end subroutine ReachLS_decompReal8
+
   subroutine ReachLS_decompInt(inV,outV)
       implicit none
       integer,INTENT(in),dimension(:) :: inV
@@ -530,7 +569,7 @@ MODULE MODULE_mpp_ReachLS
               if(aLinksl(i) .gt. 0) then
                  ! The mpi_send takes what you give it and THEN treats each caracter as an array element.
                  call mpi_send(inV(linkls_s(i):linkls_e(i)),       &
-                      aLinksl(i),                           &
+                      strLen*aLinksl(i),                           &
                       MPI_CHARACTER, i-1, tag, HYDRO_COMM_WORLD, ierr)
               endif
            endif
@@ -538,9 +577,9 @@ MODULE MODULE_mpp_ReachLS
      else
         if(aLinksl(my_id+1) .gt. 0) then
            ! The mpi_recv treats each caracter as an array element.
-           call mpi_recv(outV(1 : ((linkls_e(my_id+1)-linkls_s(my_id+1)+1)) ), &  !jlm should have +1
-                alinksl(my_id+1),                                              &
-                MPI_CHARACTER, io_id, tag, HYDRO_COMM_WORLD, mpp_status,ierr            )
+           call mpi_recv(outV(1 : (linkls_e(my_id+1)-linkls_s(my_id+1)+1) ), &  !jlm should have +1
+                strLen*alinksl(my_id+1),                                              &
+                MPI_CHARACTER, io_id, tag, HYDRO_COMM_WORLD, mpp_status,ierr          )
         endif
      endif
      call mpp_land_sync()
@@ -580,6 +619,41 @@ MODULE MODULE_mpp_ReachLS
       endif
       call mpp_land_sync()
   END subroutine ReachLS_wReal
+
+  subroutine ReachLS_wReal8(inV,outV)
+      implicit none
+      real*8,intent(in),dimension(:)  :: inV
+      real*8,intent(out),dimension(:) :: outV
+      integer :: i, ierr, tag, ss  , mm
+      outV = 0
+      if(my_id .eq. io_id) then
+         do i = 1, numprocs
+            tag = 12
+            if(i-1 .eq. io_id) then
+                if(alinksl(i) .gt. 0) then
+                   outV(linkls_s(i):linkls_e(i)) = inV(1:linkls_e(i)-linkls_s(i)+1)
+                endif
+            else
+                if(aLinksl(i) .gt. 0) then
+
+                    call mpi_recv(outV(linkls_s(i):linkls_e(i)), &
+                         aLinksl(i),                            &
+                         MPI_REAL8,i-1,tag,HYDRO_COMM_WORLD,mpp_status,ierr)
+                endif
+            endif
+         end do
+      else
+          if(aLinksl(my_id+1) .gt. 0) then
+               tag = 12
+               ss = size(inv,1)
+               call mpi_send(inV(1:aLinksl(my_id+1) ), &
+                      aLinksl(my_id+1),                      &
+                      MPI_REAL8,io_id,tag,HYDRO_COMM_WORLD,ierr)
+          endif
+      endif
+      call mpp_land_sync()
+  END subroutine ReachLS_wReal8
+
 
   subroutine ReachLS_wInt(inV,outV)
       implicit none
@@ -756,26 +830,37 @@ MODULE MODULE_mpp_ReachLS
       integer, allocatable, dimension(:,:) :: gToNodeOut
       integer :: k, m, kk, mm,indLen, i, ierr
       integer, dimension(gnlinksl) :: gto
-      integer:: maxNum,num
+      integer :: maxNum, num, tmp_num
+      integer :: cache_block_begin, cache_block_end, cache_idx, cache_block
+      integer, allocatable :: num_a(:)
 
       call gBcastValue(to,gto)
 
 !      mm = size(from,1)
        mm = l_nlinksl
- 
-      maxNum = 0
 
-      kk = 0 
-      do m = 1, mm
-          num = 0
-          do k = 1, gnlinksl
-             if(gto(k) .eq. from(m) ) then
-                 kk = kk +1
-                 num = num + 1
-             endif
-          end do
-          if(num .gt. maxNum) maxNum = num
-      end do 
+      allocate(num_a(mm))
+      cache_block = 256
+      num_a = 0
+      tmp_num = 0
+      kk = 0
+      maxNum = 0
+      do cache_idx = 0, gnlinksl-1, cache_block
+         cache_block_begin = cache_idx + 1
+         cache_block_end = min(cache_idx + cache_block, gnlinksl)
+         do m = 1, mm
+            tmp_num = num_a(m)
+            do k = cache_block_begin, cache_block_end
+               if(gto(k) .eq. from(m) ) then
+                  kk = kk + 1
+                  tmp_num = tmp_num + 1
+               endif
+            end do
+            num_a(m) = tmp_num
+            num = tmp_num
+            if(num .gt. maxNum) maxNum = num
+         end do
+      enddo
 
       allocate(ind(kk))
       allocate(gToNodeOut(mm,maxNum+1))
@@ -783,21 +868,30 @@ MODULE MODULE_mpp_ReachLS
 
       indLen = kk
 
-      kk = 0 
-      do m = 1, mm
-         num = 1
-         do k = 1, gnlinksl
-             if(gto(k) .eq. from(m) ) then
-                 kk = kk +1
-                 !yw ind(kk) = gto(k)
-                 ind(kk) = k
-                 !! gToNodeOut(m,num+1) = gto(k)
-                 gToNodeOut(m,num+1) = kk
-                 gToNodeOut(m,1) = num
-                 num = num + 1
-             endif
-          end do
-      end do 
+      kk = 0
+      num_a = 1
+      tmp_num = 1
+      do cache_idx = 0, gnlinksl-1, cache_block
+         cache_block_begin = cache_idx + 1
+         cache_block_end = min(cache_idx + cache_block, gnlinksl)
+         do m = 1, mm
+            tmp_num = num_a(m)
+            do k = cache_block_begin, cache_block_end
+               if(gto(k) .eq. from(m) ) then
+                  kk = kk +1
+                  !yw ind(kk) = gto(k)
+                  ind(kk) = k
+                  !! gToNodeOut(m,num+1) = gto(k)
+                  gToNodeOut(m,tmp_num+1) = kk
+                  gToNodeOut(m,1) = tmp_num
+                  tmp_num = tmp_num + 1
+               endif
+            end do
+            num_a(m) = tmp_num
+         end do
+      enddo
+      deallocate(num_a)
+
       ToInd(my_id+1) = kk
       do i = 0, numprocs - 1
          call mpi_bcast(ToInd(i+1),1,MPI_INTEGER,   &
@@ -965,9 +1059,9 @@ MODULE MODULE_mpp_ReachLS
             end if
           end do
        end if
-     if(my_id .eq. io_id) then 
-        if(allocated(buf)) deallocate(buf)
-     endif
+       if(my_id .eq. io_id) then 
+          if(allocated(buf)) deallocate(buf)
+       endif
   end subroutine pack_decomp_int
 
   subroutine pack_decomp_real8(g1bufid, ndata, nprocs_map, lnsizes, istart,bufid)

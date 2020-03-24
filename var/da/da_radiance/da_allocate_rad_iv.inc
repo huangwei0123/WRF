@@ -78,6 +78,9 @@ subroutine da_allocate_rad_iv (i, nchan, iv)
       if ( index(iv%instid(i)%rttovid_string, 'amsr2') > 0 ) then
          allocate (iv%instid(i)%clw(iv%instid(i)%num_rad))
       end if
+      if ( index(iv%instid(i)%rttovid_string, 'ahi') > 0 ) then
+         allocate (iv%instid(i)%cloudflag(iv%instid(i)%num_rad))
+      end if	  
       allocate (iv%instid(i)%ps(iv%instid(i)%num_rad))
       allocate (iv%instid(i)%tb_xb(nchan,iv%instid(i)%num_rad))
       if ( crtm_cloud ) then
@@ -139,7 +142,7 @@ subroutine da_allocate_rad_iv (i, nchan, iv)
                allocate(iv%instid(i)%der_trans(nchan,iv%instid(i)%nlevels,iv%instid(i)%num_rad))
             end if
 
-            if (use_clddet_ecmwf) then
+            if (use_clddet==3) then
                allocate (iv%instid(i)%kmin_t (iv%instid(i)%num_rad))
                allocate (iv%instid(i)%kmax_p (iv%instid(i)%num_rad))
                allocate (iv%instid(i)%sensitivity_ratio (nchan,iv%instid(i)%nlevels,iv%instid(i)%num_rad))

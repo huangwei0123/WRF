@@ -12,10 +12,11 @@ module da_rttov
        i_kind,r_kind, r_double, &
        one, zero, three,deg2rad, q2ppmv, &
        coefs, opts,opts_rt_ir, rttov_inst_name
-   use module_radiance, only : rttov_options, rttov_opts_rt_ir, rttov_coefs, profile_type, &
-       transmission_type, radiance_type, rttov_chanprof, &
+   use module_radiance, only : rttov_options, rttov_opts_rt_ir, rttov_coefs, rttov_profile, &
+       rttov_transmission, rttov_radiance, rttov_chanprof, &
        jpim, jprb, errorstatus_success, errorstatus_fatal, gas_id_watervapour, &
-       sensor_id_ir, sensor_id_mw, sensor_id_hi,rttov_emissivity
+       atlas, atlas_type, atlas_id, atlas_type_ir, atlas_type_mw, &
+       sensor_id_ir, sensor_id_mw, sensor_id_hi, sensor_id_po, rttov_emissivity
 
    use da_control, only : max_ob_levels,missing_r, &
       v_interp_p, v_interp_h, tovs_batch, gravity, &
@@ -29,7 +30,7 @@ module da_rttov
       rtminit_print, rttov_scatt,comm,ierr,biasprep, qc_rad, &
       num_fgat_time,stdout,trace_use, use_error_factor_rad, &
       qc_good, qc_bad,myproc,biascorr, global,ims,ime,jms,jme, &
-      use_clddet_mmr, time_slots, rttov_emis_atlas_ir, rttov_emis_atlas_mw, &
+      use_clddet, time_slots, rttov_emis_atlas_ir, rttov_emis_atlas_mw, &
       use_mspps_emis, use_mspps_ts
    use da_interpolation, only : da_to_zk_new, &
       da_interp_lin_2d, da_interp_lin_3d, da_interp_lin_3d_adj, da_interp_lin_2d_adj
